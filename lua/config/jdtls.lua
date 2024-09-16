@@ -79,15 +79,15 @@ local function java_keymaps()
     vim.keymap.set('n', '<leader>Ju', "<Cmd> JdtUpdateConfig<CR>", { desc = "[J]ava [U]pdate Config" })
 end
 
-local function() setup_jdts()
+local function setup_jdtls()
     -- set acces o the jdtls plugin and all of its functionality
     local jdtls = require "jdtls"
 
     -- get the paths to the jdtls jar, operating specific configuaration directory and lombok jar
-    local launchar, os_config, lombok = get_jdtls()
+    local launcher, os_config, lombok = get_jdtls()
 
     -- get the path you specified to hold project information
-    local bundles = get_bundles()
+    local workspace_dir = get_workspace()
 
     -- get the bundles list with the jars to the debug adapeter, and testing adapters
     local bundles = get_bundles()
@@ -106,6 +106,9 @@ local function() setup_jdts()
             }
         }
     }
+    local lsp_capabilities = require("cmp_nvim_lsp").default_capabilities()
+
+    for k,v in pairs(lsp_capabilities) do capabilities[k] = v end
 
     -- get the default extended client capabilities of the jdtls language server
     local extendedClientCapabilities = jdtls.extendedClientCapabilities
@@ -113,9 +116,172 @@ local function() setup_jdts()
     extendedClientCapabilities.resolveAdditionalTextEditsSupport = true;
 
     -- set the command that starts the JDTLS language server jar
-    
+    local cmd = {
+        'java',
+        '-Decliple.application=org.eclipse.jdt.ls.core.id1',
+        '-Dosgi.bundles.defaultStartLevel=4',
+        '-Declipse.product=org.eclipse.jdt.ls.core.product',
+        '-Dlog.level=ALL',
+        '-Xmx1g',
+        '--add-modules=ALL-SYSTEM',
+        '--add-opens', 'java.base/java.util=ALL-UNNAMED',
+        '-javaagent:' .. lombok,
+        '-jar',
+        launcher,
+        '-configuration',
+        os_config,
+        '-data',
+        workspace_dir
+    }
 
+    -- Configure settings in th JDTLS server
+    local settings = {
+        java = {
+            -- Enable code formatting
+            format = {
+                enabled = true,
+                -- use google style for formatting code
+                settings = {
+                    url = vim.fn.stdpath("config") .. "/lang_servers/intellij-java-google-style.xml",
+                    profile = "GoogleStyle"
+                }
+            },
+            -- enable downloading archives from eclipse automatically
+            eclipse = {
+                downloadSource = true
+            },
+            -- enable downlaoding archives from maven automatically
+            maven = {
+                downloadSource = true
+            },
+            -- enable method signature help
+            signatureHelp = {
+                enabled = true
+            },
+            -- use the fernflower decompiler when using the javap command to decompile byte code back to java code
+            contentProvider = {
+                organizeImports = true
+            },
+            -- setup automaitcal package import organization on file save
+            saveActions = {
+                organizeImports = true
+            },
+            -- customize completion options
+            completion = {
+                -- when using an unimported static method, how should the LSP rank possible places to import the static method from
+                favoriteStaticMemebers = {
+                    "org.util.Objects.*",
+                    "org.mockito.Mockito.*"
+                },
+                -- try not to suggest imports from these packages in the code action windows
+                filteredTypes = {
+                    "com.sun.*",
+                    "io.micrometer.shaded.*",
+                    "java.awt.*",
+                    "jdk.*",
+                    "sun.*"
+                },
+                -- set the order in which the language server should organize imports
+                importOrder = {
+                    "java",
+                    "jakarta",
+                    "javax",
+                    "com",
+                    "org",
+                    "ru"
+                }
+            },
+            sources = {
+                -- how many classes from a package before the are combined into a single import
+                organizeImports = {
+                    starThreshold = 9999,
+                    staticThreshold = 9999
+                }
+            },
+            -- how should different pieces of code be generated
+            codeGeneration = {
+                -- when generating toString use a json format
+                toString = {
+                    template = "${object.className}{${member.name()}=${member.value},${otherMembers}}"
+                },
+                -- when generating hashCode and equals methods use the java 7 objects method
+                hashCodeEquals = {
+                    useJava7Objects = true
+                },
+                -- when generating code use code blocks
+                useBlocks = true
+            },
+            -- if changes to the project will require the developer to update the projects configuration advise the developer before accepting the changes
+            configuration = {
+                updateBuildConfiguration = "interactive"
+            },
+            referenceCodeLens = {
+                enabled = true
+            },
+            -- enable inlay hints for parameter names
+            inlayHints = {
+                parameterNames = {
+                    parameterNames = {
+                        enabled = "all"
+                    }
+                }
+            }
+        }
+    }
+
+    -- create a table called init_options to pass the bundles with debug and testing jar, along with the extended client capabilities to the start or attach function of JDTLS
+    local init_options = {
+        bundles = bundles,
+        extendedClientCapabilities = extendedClientCapabilities
+    }
+
+    -- function that will be run once the language server is attached
+    local on_attach = function (_, bufnr)
+        -- map the java specific key mappings once the server is attached
+        java_keymaps()
+
+        -- setup the java debug adapter of the JDTLS server
+        require('jdtls.dap').setup_dap()
+
+        -- find the main method(s) of the application so the debug adapter can 
+        -- successfully start up the application
+        --
+        -- sometimes this will randomly fail if language server takes too 
+        -- long to start up for the project, if a ClassDefNotFoundException 
+        -- occurs when running. Unfortunately, I have not found an 
+        -- elegant way to ensure this works 100%
+        require('jdtls.dap').setup_dap_main_class_configs()
+
+        -- enable jdtls commands to be used in neovim
+        require 'jdts_setup'.add_commands()
+        -- refresh the codelens
+        -- code lens enables features such as code reference counts, implementation counts, and more
+        vim.sp.codelens.refresh()
+
+        -- setup a function that automatically runs every time a java file is saved to refresh
+        -- code lens
+        vim.api.nvim_create_autocmd("BufWritePost", {
+            pattern = { "*.java" },
+            callback = function()
+                local _, _  = pcall(vim.lsp.codelens.refresh)
+            end
+        })
+    end
+
+    -- create the configuration table for the startlaunchar or attach function
+    local config = {
+        cmd = cmd,
+        root_dir = root_dir,
+        settings = settings,
+        capabilities = capabilities,
+        init_options = init_options,
+        on_attack = on_attach
+    }
+
+    -- start the jdtls server
+    require('jdtls').start_or_attach(config)
 end
 
-
-
+return {
+    setup_jdtls = setup_jdtls
+}
