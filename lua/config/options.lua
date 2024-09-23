@@ -40,3 +40,4 @@ vim.opt.smartcase = true -- match case if explicitly stated
 
 -- clipboard
 vim.opt.clipboard = unnamedplus -- copy to clipboard instead of Nvim's inner register
+vim.opt.swapfile = false -- disalbe swapfiles 
