@@ -4,7 +4,7 @@ vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 
 -- Remove search highlights after searching
-vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>", { desc = "Remove search highlights" })
+vim.keymap.set("n", "<leader><Esc>", "<cmd>:noh<CR>", { desc = "Remove search highlights" })
 
 -- Exit Vim's terminal mode
 vim.keymap.set("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
