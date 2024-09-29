@@ -18,3 +18,6 @@ vim.cmd [[
         autocmd FileType c lua require'config.clangd'.setup_clangd()
     augroup end
 ]]
+
+vim.cmd [[set listchars=space:·,tab:->\]]
+vim.cmd [[set list]]

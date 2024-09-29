@@ -20,6 +20,10 @@ local function setup_clangd()
 	require("lspconfig").clangd.setup({
 		capabilities = capabilities,
 		-- on_attach = on_attach,
+		cmd = {
+			"clangd",
+			"--fallback-style=webkit",
+		},
 	})
 end
 
