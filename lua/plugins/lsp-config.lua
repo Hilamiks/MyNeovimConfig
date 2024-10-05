@@ -24,7 +24,8 @@ return {
                     "ts_ls",
                     "jdtls",
                     "cssls",
-                    "clangd"
+                    "clangd",
+                    "cmake"
                 }
             })
         end

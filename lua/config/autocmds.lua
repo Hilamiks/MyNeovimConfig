@@ -1,4 +1,11 @@
 vim.cmd [[
+    augroup wtf
+        autocmd!
+        autocmd BufRead,BufNewFile,BufEnter CMakeLists.txt lua require'config.cmake'.setup_cmake()
+    augroup end
+]]
+
+vim.cmd [[
     augroup jdtls_lsp
         autocmd!
         autocmd FileType java lua require'config.jdtls'.setup_jdtls()
