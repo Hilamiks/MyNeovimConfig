@@ -13,20 +13,21 @@
 local capabilities = require("cmp_nvim_lsp").default_capabilities(vim.lsp.protocol.make_client_capabilities())
 
 require("lspconfig").clangd.setup({
-	capabilities = capabilities,
-	-- on_attach = on_attach,
+    capabilities = capabilities,
+    -- on_attach = on_attach,
 })
 local function setup_clangd()
-	require("lspconfig").clangd.setup({
-		capabilities = capabilities,
-		-- on_attach = on_attach,
-		cmd = {
-			"clangd",
-			"--fallback-style=webkit",
-		},
-	})
+    require("lspconfig").clangd.setup({
+        capabilities = capabilities,
+        -- on_attach = on_attach,
+        cmd = {
+            "clangd",
+            "--fallback-style=webkit",
+            "--compile-commands-dir=/build/",
+        },
+    })
 end
 
 return {
-	setup_clangd = setup_clangd,
+    setup_clangd = setup_clangd,
 }
